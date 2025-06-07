@@ -7,214 +7,74 @@
     <link rel="stylesheet" href="style.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
 </head>
 <body>
-<!-- Header -->
-<div class="header">
-    <div class="container">
-    <div class="header-content">
-        <div class="logo">
-        <div class="logo-icon">📦</div>
-        <div class="logo-text">LockerHub</div>
-        </div>
-        <div class="status-badge">
-        <div class="status-dot"></div>
-        System Online
-        </div>
-    </div>
-    </div>
-</div>
-
-<!-- Main Content -->
-<div class="main">
-    <div class="container">
-    <!-- Section Title -->
-    <div class="section-title">
-        <h1>Parcel Locker Management</h1>
-        <p>Monitor and control your smart locker compartments in real-time</p>
-    </div>
-
-    <!-- Locker Grid -->
-    <div class="locker-grid">
-        <div id="compartment1" class="compartment-card" onclick="cycleStatus('compartment1')">
-            <div class="compartment-header">
-                <div class="compartment-title">Compartment 1</div>
-                <div class="status-indicator status-default">Available</div>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+        <div class="header-content">
+            <div class="logo">
+            <div class="logo-icon">📦</div>
+            <div class="logo-text">LockerHub</div>
             </div>
-            <div class="compartment-icon">📦</div>
-            <div class="compartment-info">Click to cycle through status modes</div>
-        </div>
-
-        <div id="compartment2" class="compartment-card" onclick="cycleStatus('compartment2')">
-            <div class="compartment-header">
-                <div class="compartment-title">Compartment 2</div>
-                <div class="status-indicator status-default">Available</div>
+            <div class="status-badge">
+            <div class="status-dot"></div>
+            System Online
             </div>
-            <div class="compartment-icon">📦</div>
-            <div class="compartment-info">Click to cycle through status modes</div>
+        </div>
         </div>
     </div>
 
-    <!-- Control Panel -->
-    <div class="control-panel">
-        <div class="control-title" onclick="allowRider()">System Controls</div>
-        
-        <div class="system-actions">
-        <button class="system-btn success" onclick="fetch('/allow')">
-            🔓 Open Locker
-        </button>
-        <button class="system-btn danger" onclick="fetch('/reset')">
-            🔄 Reset Security
-        </button>
+    <!-- Main Content -->
+    <div class="main">
+        <div class="container">
+        <!-- Section Title -->
+        <div class="section-title">
+            <h1>Parcel Locker Management</h1>
+            <p>Monitor and control your smart locker compartments in real-time</p>
+        </div>
+
+        <!-- Locker Grid -->
+        <div class="locker-grid">
+            <div id="compartment1" class="compartment-card" onclick="cycleStatus('compartment1')">
+                <div class="compartment-header">
+                    <div class="compartment-title">Compartment 1</div>
+                    <div class="status-indicator status-default">Available</div>
+                </div>
+                <div class="compartment-icon">📦</div>
+                <div class="compartment-info">Click to cycle through status modes</div>
+            </div>
+
+            <div id="compartment2" class="compartment-card" onclick="cycleStatus('compartment2')">
+                <div class="compartment-header">
+                    <div class="compartment-title">Compartment 2</div>
+                    <div class="status-indicator status-default">Available</div>
+                </div>
+                <div class="compartment-icon">📦</div>
+                <div class="compartment-info">Click to cycle through status modes</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="control-title">System Controls</div>
+            
+            <div class="system-actions">
+            <button class="system-btn success" onclick="fetch('/allow')">
+                🔓 Open Locker
+            </button>
+            <button class="system-btn danger" onclick="fetch('/reset')">
+                🔄 Reset Security
+            </button>
+            </div>
+        </div>
         </div>
     </div>
-    </div>
-</div>
-
+<script src="main.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    // Store current status for each compartment
-    const compartmentStates = {
-    compartment1: 'default',
-    compartment2: 'default'
-    };
-
-    function getIconForStatus(status) {
-    switch(status) {
-        case 'occupied': return '📋';
-        case 'theft': return '🚨';
-        default: return '📦';
-    }
-    }
-
-    function getStatusText(status) {
-    switch(status) {
-        case 'occupied': return 'Occupied';
-        case 'theft': return 'Alert';
-        default: return 'Available';
-    }
-    }
-
-    function setStatus(id, status) {
-    const card = document.getElementById(id);
-    const icon = card.querySelector('.compartment-icon');
-    const statusIndicator = card.querySelector('.status-indicator');
-    
-    // Store the current state
-    compartmentStates[id] = status;
-    
-    // Reset classes
-    card.className = 'compartment-card';
-    statusIndicator.className = 'status-indicator';
-
-    // Update icon and styling based on status
-    icon.textContent = getIconForStatus(status);
-    statusIndicator.textContent = getStatusText(status);
-    
-    if (status === 'occupied') {
-        card.classList.add('occupied');
-        statusIndicator.classList.add('status-occupied');
-    } else if (status === 'theft') {
-        card.classList.add('theft');
-        statusIndicator.classList.add('status-theft');
-    } else {
-        statusIndicator.classList.add('status-default');
-    }
-    }
-
-    function cycleStatus(id) {
-    const currentStatus = compartmentStates[id];
-    let nextStatus;
-    
-    switch(currentStatus) {
-        case 'default':
-        nextStatus = 'occupied';
-        break;
-        case 'occupied':
-        nextStatus = 'theft';
-        break;
-        case 'theft':
-        nextStatus = 'default';
-        break;
-        default:
-        nextStatus = 'default';
-    }
-    
-    setStatus(id, nextStatus);
-    }
-
-    function allowRider() {
-    Swal.fire({
-        title: 'Someone is Requesting Access',
-        text: 'Are you expecting any delivery\nat this moment?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Allow Access',
-        cancelButtonText: 'Cancel',
-        reverseButtons: true,
-        customClass: {
-        confirmButton: 'swal2-confirm-custom',
-        cancelButton: 'swal2-cancel-custom'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-        fetch('/reset')
-            .then(() => {
-            Swal.fire({
-                title: 'Access Granted!',
-                text: 'Locker is now open.',
-                icon: 'success',
-                confirmButtonText: 'Got it',
-                customClass: {
-                confirmButton: 'swal2-confirm-custom'
-                },
-                buttonsStyling: false
-            });
-            })
-            .catch(() => {
-            Swal.fire({
-                title: 'Connection Error',
-                text: 'Unable to communicate with the server.',
-                icon: 'error',
-                confirmButtonText: 'Retry',
-                customClass: {
-                confirmButton: 'swal2-confirm-custom'
-                },
-                buttonsStyling: false
-            });
-            });
-        }
-    });
-    }
-
-    // Initialize default states
-    setStatus('compartment1', 'default');
-    setStatus('compartment2', 'default');
-
-    // Add custom SweetAlert2 styles
-    const style = document.createElement('style');
-    style.textContent = `
-    .swal2-confirm-custom {
-        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        font-weight: 600 !important;
-        margin: 0 8px !important;
-    }
-    .swal2-cancel-custom {
-        background: #f1f5f9 !important;
-        color: #64748b !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 12px !important;
-        padding: 12px 24px !important;
-        font-weight: 600 !important;
-        margin: 0 8px !important;
-    }
-    `;
-    document.head.appendChild(style);
-</script>
 </body>
 </html>
