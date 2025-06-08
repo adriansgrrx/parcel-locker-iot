@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>Parcel Locker Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">📦</div>
+                    <div class="logo-text">LockerHub</div>
+                </div>
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    System Online
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <div class="container">
+            <!-- Section Title -->
+            <div class="section-title">
+                <h1>Parcel Locker Management</h1>
+                <p>Monitor and control your smart locker compartments in real-time</p>
+            </div>
+
+            <!-- Locker Grid -->
+            <div class="locker-grid">
+                <div id="compartment1" class="compartment-card" onclick="cycleStatus('compartment1')">
+                    <div class="compartment-header">
+                        <div class="compartment-title">Compartment 1</div>
+                        <div class="status-indicator status-available">Available</div>
+                    </div>
+                    <div class="compartment-icon">📦</div>
+                    <div class="compartment-info">Click to cycle through status modes</div>
+                    <div class="compartment-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Distance:</span>
+                            <span class="detail-value" id="distance1">25.4 cm</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Parcel Detected:</span>
+                            <span class="detail-value" id="parcel1">No</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Security Mode:</span>
+                            <span class="detail-value" id="security1">Off</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="compartment2" class="compartment-card" onclick="cycleStatus('compartment2')">
+                    <div class="compartment-header">
+                        <div class="compartment-title">Compartment 2</div>
+                        <div class="status-indicator status-available">Available</div>
+                    </div>
+                    <div class="compartment-icon">📦</div>
+                    <div class="compartment-info">Click to cycle through status modes</div>
+                    <div class="compartment-details">
+                        <div class="detail-row">
+                            <span class="detail-label">Distance:</span>
+                            <span class="detail-value" id="distance2">30.2 cm</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Parcel Detected:</span>
+                            <span class="detail-value" id="parcel2">No</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Security Mode:</span>
+                            <span class="detail-value" id="security2">Off</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <div class="control-title">System Controls</div>
+                <div class="system-actions">
+                    <button class="system-btn success" onclick="allowRider()">
+                        🔓 Open Locker
+                    </button>
+                    <button class="system-btn danger" onclick="resetSecurity()">
+                        🔄 Reset Security
+                    </button>
+                </div>
+            </div>
+
+            <!-- Events Log -->
+            <div class="events-section">
+                <div class="events-log">
+                    <div class="events-title">Recent Events</div>
+                    <div id="events-container">
+                        <!-- Events will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

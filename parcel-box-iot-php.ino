@@ -5,10 +5,10 @@
 #include <ArduinoJson.h>
 
 // WiFi Configuration
-const char WIFI_SSID[] = "HUAWEI-2.4G-Y26h";     // CHANGE IT
-const char WIFI_PASSWORD[] = "7HgbGvVj";          // CHANGE IT
-String HOST_NAME = "http://192.168.100.6";        // Your server IP
-String PATH_NAME = "/api/update_compartments";     // API endpoint
+const char WIFI_SSID[] = "Adrian";     // CHANGE IT
+const char WIFI_PASSWORD[] = "eds1234567";          // CHANGE IT
+String HOST_NAME = "http://172.20.10.2";        // Your server IP
+String PATH_NAME = "parcel-box/index.php";     // API endpoint
 
 // LCD setup
 LiquidCrystal_I2C lcd(0x27, 16, 2);
