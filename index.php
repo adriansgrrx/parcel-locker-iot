@@ -13,6 +13,20 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    
+    // === Handle AJAX requests for checking alerts ===
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && (isset($_GET['check_alert_user']) || isset($_GET['check_submit_delivery']))) {
+        $stmt = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1");
+        $row = $stmt->fetch();
+        
+        // Return both values for polling
+        echo json_encode([
+            'alert_user' => $row['alert_user'],
+            'submit_delivery' => $row['submitted_delivery']  // Note: submit_delivery in response
+        ]);
+        exit;
+    }
+
     // Handle control flag toggles
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($_POST['action'] === 'toggle_permission') {
@@ -42,6 +56,16 @@ try {
         exit;
     }
 
+    // === Toggle submit_delivery flag (alternative action name for JavaScript compatibility) ===
+    if (isset($_POST['action']) && $_POST['action'] === 'toggle_submit_delivery') {
+        $newValue = ($_POST['value'] === 'on') ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE control_flags SET submitted_delivery = ? WHERE id = 1");
+        $stmt->execute([$newValue]);
+
+        echo json_encode(["success" => true, "message" => "submit_delivery updated."]);
+        exit;
+    }
+
     // === Toggle alert_user flag ===
     if (isset($_POST['action']) && $_POST['action'] === 'toggle_alert_user') {
         $newValue = ($_POST['value'] === 'on') ? 1 : 0;
@@ -51,14 +75,6 @@ try {
         echo json_encode(["success" => true, "message" => "alert_user updated."]);
         exit;
     }
-
-    if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['check_alert_user'])) {
-    $stmt = $pdo->query("SELECT alert_user FROM control_flags WHERE id = 1");
-    $row = $stmt->fetch();
-    echo json_encode($row);
-    exit;
-    }
-
 
     // ESP32 GET request for current control flags
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['get_control_flags'])) {
@@ -149,7 +165,6 @@ $alertUser = $flagsCheck['alert_user'];
 $submittedDelivery = $flagsCheck['submitted_delivery'];
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -182,27 +197,42 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
     let alertShown = false;
-
-    // Initial value from PHP
+    let parcelAlertShown = false;
+    
+    //* Initial values from PHP*
     let initialAlertUser = <?= $alertUser ?>;
+    let initialSubmitDelivery = <?= $submittedDelivery ?>; // Fixed variable name
+    
     if (initialAlertUser == 1) {
         triggerAccessAlert();
     }
-
-    // Poll every 3 seconds
+    
+    if (initialSubmitDelivery == 1) {
+        triggerParcelArrivedAlert();
+    }
+    
+    //* Poll every 3 seconds*
     setInterval(() => {
-        fetch(window.location.href + '?check_alert_user=1')
+        fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
             .then(response => response.json())
             .then(data => {
+                // Check for access alert
                 if (data.alert_user == 1 && !alertShown) {
                     triggerAccessAlert();
                 }
+                
+                // Check for parcel delivery alert
+                if (data.submit_delivery == 1 && !parcelAlertShown) {
+                    triggerParcelArrivedAlert();
+                }
+            })
+            .catch(error => {
+                console.error('Polling error:', error);
             });
     }, 3000);
-
+    
     function triggerAccessAlert() {
         alertShown = true;
-
         Swal.fire({
         title: 'Someone is Requesting Access',
         html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
@@ -246,8 +276,7 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
                     });
                 });
             }
-
-            // Always reset alert_user
+            //* Always reset alert_user*
             fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -257,8 +286,9 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
             });
         });
     }
-
+    
     function triggerParcelArrivedAlert() {
+        parcelAlertShown = true;
         Swal.fire({
             title: 'Parcel Delivered!',
             html: 'A parcel has just been placed in your locker. You may now retrieve it.',
@@ -274,10 +304,18 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
                 htmlContainer: '!text-sm text-gray-600'
             },
             buttonsStyling: false
+        }).then((result) => {
+            //* Always reset submit_delivery after alert is shown/closed*
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=toggle_submit_delivery&value=off'
+            }).then(() => {
+                parcelAlertShown = false;
+            });
         });
     }
-
-    </script>
+</script>
     <style>
         @keyframes fadeHighlight {
             0% { background-color: #e8f5e9; }
