@@ -13,42 +13,96 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    // Handle control flag toggles
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+        if ($_POST['action'] === 'toggle_permission') {
+            $value = $_POST['value'] === 'on' ? 1 : 0;
+            $stmt = $pdo->prepare("UPDATE control_flags SET permission_granted = ?");
+            $stmt->execute([$value]);
+            echo json_encode(["success" => true, "message" => "Permission flag updated."]);
+            exit;
+        }
+
+        if ($_POST['action'] === 'toggle_reset') {
+            $value = $_POST['value'] === 'on' ? 1 : 0;
+            $stmt = $pdo->prepare("UPDATE control_flags SET reset_triggered = ?");
+            $stmt->execute([$value]);
+            echo json_encode(["success" => true, "message" => "Reset flag updated."]);
+            exit;
+        }
+    }
+
+    // ESP32 GET request for current control flags
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['get_control_flags'])) {
+        $stmt = $pdo->query("SELECT permission_granted, reset_triggered FROM control_flags LIMIT 1");
+        $flags = $stmt->fetch();
+        echo json_encode($flags);
+        exit;
+    }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $compartment_id = $_POST['compartment_id'];
-        
-        // Handle reset security action
+        $compartment_id = $_POST['compartment_id'] ?? null;
+
+        // === Toggle permission_granted flag ===
+        if (isset($_POST['action']) && $_POST['action'] === 'toggle_permission') {
+            $newValue = ($_POST['value'] === 'on') ? 1 : 0;
+            $stmt = $pdo->prepare("UPDATE control_flags SET permission_granted = ? WHERE id = 1");
+            $stmt->execute([$newValue]);
+
+            echo json_encode(["success" => true, "message" => "permission_granted updated."]);
+            exit;
+        }
+
+        // === Toggle reset_triggered flag ===
+        if (isset($_POST['action']) && $_POST['action'] === 'toggle_reset') {
+            $newValue = ($_POST['value'] === 'on') ? 1 : 0;
+            $stmt = $pdo->prepare("UPDATE control_flags SET reset_triggered = ? WHERE id = 1");
+            $stmt->execute([$newValue]);
+
+            echo json_encode(["success" => true, "message" => "reset_triggered updated."]);
+            exit;
+        }
+
+        // === Handle reset security ===
         if (isset($_POST['action']) && $_POST['action'] === 'reset_security') {
-            // Reset to default empty state
             $stmt = $pdo->prepare("UPDATE compartments SET distance_cm=?, is_parcel_detected=?, is_security_mode=?, status=? WHERE compartment_id=?");
             $stmt->execute([30.0, 0, 0, 'Empty', $compartment_id]);
-            
-            // Log the reset event
+
             $stmt = $pdo->prepare("INSERT INTO events_log (event_type, compartment_id, status, distance_cm) VALUES (?, ?, ?, ?)");
             $stmt->execute(['security_reset', $compartment_id, 'Empty', 30.0]);
-            
+
             echo json_encode(["success" => true, "message" => "Security reset successfully."]);
             exit;
         }
-        
-        // Regular data update
-        $distance_cm = floatval($_POST['distance_cm']);
-        $is_parcel_detected = intval($_POST['is_parcel_detected']);
-        $is_security_mode = intval($_POST['is_security_mode']);
-        $status = $_POST['status'];
+
+        // === Regular data update ===
+        $distance_cm = floatval($_POST['distance_cm'] ?? 0);
+        $is_parcel_detected = intval($_POST['is_parcel_detected'] ?? 0);
+        $is_security_mode = intval($_POST['is_security_mode'] ?? 0);
+        $status = $_POST['status'] ?? '';
         $event_type = $_POST['event_type'] ?? 'parcel_detected';
 
-        // Update compartment state
         $stmt = $pdo->prepare("UPDATE compartments SET distance_cm=?, is_parcel_detected=?, is_security_mode=?, status=? WHERE compartment_id=?");
         $stmt->execute([$distance_cm, $is_parcel_detected, $is_security_mode, $status, $compartment_id]);
 
-        // Log event
         $stmt = $pdo->prepare("INSERT INTO events_log (event_type, compartment_id, status, distance_cm) VALUES (?, ?, ?, ?)");
         $stmt->execute([$event_type, $compartment_id, $status, $distance_cm]);
 
         echo json_encode(["success" => true, "message" => "Data saved."]);
         exit;
-    } else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch'])) {
+    } 
+    
+    // === Fetch control flags for ESP32 ===
+    else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['get_control_flags'])) {
+        $stmt = $pdo->query("SELECT permission_granted, reset_triggered FROM control_flags WHERE id = 1");
+        $flags = $stmt->fetch();
+
+        echo json_encode($flags);
+        exit;
+    }
+
+    // === Fetch frontend dashboard data ===
+    else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['fetch'])) {
         $compartments = $pdo->query("SELECT * FROM current_compartments")->fetchAll();
         $events = $pdo->query("SELECT * FROM recent_events")->fetchAll();
         echo json_encode(["compartments" => $compartments, "events" => $events]);
@@ -60,6 +114,7 @@ try {
 }
 ?>
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,6 +125,7 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
+            plugins: [daisyui],
             theme: {
                 extend: {
                     fontFamily: {
@@ -87,6 +143,7 @@ try {
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.8.1/dist/full.js"></script>
     <style>
         @keyframes fadeHighlight {
             0% { background-color: #e8f5e9; }
@@ -229,17 +286,34 @@ try {
         <!-- Control Panel -->
         <div class="bg-white/95 rounded-2xl p-6 sm:p-8 text-center shadow-xl mb-8 sm:mb-12">
             <div class="text-xl sm:text-2xl font-semibold mb-6 text-gray-800">System Controls</div>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button id="openLockerBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 sm:px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:-translate-y-1 min-w-32 sm:min-w-48 responsive-button"
-                        onclick="openLocker()">
-                    🔓 Open Locker
-                </button>
-                <button id="resetSecurityBtn" class="bg-red-500 hover:bg-red-600 text-white px-6 sm:px-8 py-3 rounded-lg font-medium transition-all duration-300 hover:-translate-y-1 min-w-32 sm:min-w-48 responsive-button"
-                        onclick="resetSecurity()">
-                    🔄 Reset Security
-                </button>
+            <div class="flex flex-col sm:flex-row gap-6 justify-center items-center">
+
+            <!-- Open Locker Toggle -->
+            <label class="flex items-center gap-3 cursor-pointer">
+                <span class="text-gray-700 font-medium">🔓 Open Locker</span>
+                <div class="relative flex items-center">
+                    <input type="checkbox" id="openLockerToggle" class="sr-only peer" onchange="handleOpenLockerToggle(this)">
+                    <div class="w-14 h-8 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors duration-300"></div>
+                    <div class="w-6 h-6 bg-white rounded-full absolute top-1 left-1 peer-checked:translate-x-6 transition-transform duration-300"></div>
+                    <span class="absolute text-xs text-white font-bold left-1.5 top-1.5 peer-checked:hidden">OFF</span>
+                    <span class="absolute text-xs text-white font-bold right-1.5 top-1.5 hidden peer-checked:inline">ON</span>
+                </div>
+            </label>
+
+            <!-- Reset Security Toggle -->
+            <label class="flex items-center gap-3 cursor-pointer">
+                <span class="text-gray-700 font-medium">🔄 Security Mode</span>
+                <div class="relative flex items-center">
+                    <input type="checkbox" id="resetSecurityToggle" class="sr-only peer" onchange="handleResetSecurityToggle(this)">
+                    <div class="w-14 h-8 bg-gray-300 rounded-full peer-checked:bg-red-500 transition-colors duration-300"></div>
+                    <div class="w-6 h-6 bg-white rounded-full absolute top-1 left-1 peer-checked:translate-x-6 transition-transform duration-300"></div>
+                    <span class="absolute text-xs text-white font-bold left-1.5 top-1.5 peer-checked:hidden">OFF</span>
+                    <span class="absolute text-xs text-white font-bold right-1.5 top-1.5 hidden peer-checked:inline">ON</span>
+                </div>
+            </label>
             </div>
         </div>
+
 
         <!-- Recent Events Section -->
         <div class="bg-white/95 rounded-2xl p-6 sm:p-8 shadow-xl">
@@ -327,99 +401,212 @@ try {
         }
     }
 
-    async function openLocker() {
-        const { value: compartmentId } = await Swal.fire({
-            title: 'Select Compartment',
-            input: 'select',
-            inputOptions: {
-                'compartment1': 'Compartment 1',
-                'compartment2': 'Compartment 2'
-            },
-            inputPlaceholder: 'Choose a compartment',
-            showCancelButton: true,
-            confirmButtonText: 'Open',
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#6b7280',
+//     async function openLocker() {
+//     const { value: compartmentId } = await Swal.fire({
+//         title: 'Select Compartment',
+//         input: 'select',
+//         inputOptions: {
+//             'compartment1': 'Compartment 1',
+//             'compartment2': 'Compartment 2'
+//         },
+//         inputPlaceholder: 'Choose a compartment',
+//         showCancelButton: true,
+//         confirmButtonText: 'Open',
+//         confirmButtonColor: '#10b981',
+//         cancelButtonColor: '#6b7280',
+//     });
+
+//     if (compartmentId) {
+//         // Send permission trigger
+//         const formData = new FormData();
+//         formData.append('action', 'toggle_permission');
+//         formData.append('value', 'on');
+
+//         await fetch('control_handler.php', { method: 'POST', body: formData });
+
+//         Swal.fire({
+//             title: 'Opening Locker...',
+//             text: `${compartmentId.replace('compartment', 'Compartment ')} is being opened`,
+//             icon: 'success',
+//             timer: 2000,
+//             showConfirmButton: false,
+//             timerProgressBar: true
+//         });
+//     }
+// }
+
+
+//     async function resetSecurity() {
+//     const { value: compartmentId } = await Swal.fire({
+//         title: 'Reset Security Mode',
+//         text: 'Select compartment to reset security',
+//         input: 'select',
+//         inputOptions: {
+//             'compartment1': 'Compartment 1',
+//             'compartment2': 'Compartment 2'
+//         },
+//         inputPlaceholder: 'Choose a compartment',
+//         showCancelButton: true,
+//         confirmButtonText: 'Reset Security',
+//         confirmButtonColor: '#ef4444',
+//         cancelButtonColor: '#6b7280',
+//         icon: 'warning'
+//     });
+
+//     if (compartmentId) {
+//         try {
+//             Swal.fire({
+//                 title: 'Resetting Security...',
+//                 allowOutsideClick: false,
+//                 showConfirmButton: false,
+//                 willOpen: () => {
+//                     Swal.showLoading();
+//                 }
+//             });
+
+//             // First, reset the selected compartment
+//             const formData = new FormData();
+//             formData.append('action', 'reset_security');
+//             formData.append('compartment_id', compartmentId);
+
+//             const response = await fetch(window.location.href, {
+//                 method: 'POST',
+//                 body: formData
+//             });
+
+//             const result = await response.json();
+
+//             if (result.success) {
+//                 // Trigger reset flag
+//                 const flagForm = new FormData();
+//                 flagForm.append('action', 'toggle_reset');
+//                 flagForm.append('value', 'on');
+
+//                 await fetch('control_handler.php', {
+//                     method: 'POST',
+//                     body: flagForm
+//                 });
+
+//                 Swal.fire({
+//                     title: 'Security Reset Successfully!',
+//                     text: `${compartmentId.replace('compartment', 'Compartment ')} has been reset to default state`,
+//                     icon: 'success',
+//                     confirmButtonColor: '#10b981',
+//                     timer: 3000,
+//                     timerProgressBar: true
+//                 });
+
+//                 fetchData();
+//             } else {
+//                 throw new Error(result.error || 'Reset failed');
+//             }
+//         } catch (error) {
+//             Swal.fire({
+//                 title: 'Reset Failed',
+//                 text: 'Could not reset security mode. Please try again.',
+//                 icon: 'error',
+//                 confirmButtonColor: '#ef4444'
+//             });
+//         }
+//     }
+// }
+
+// 
+    async function handleOpenLockerToggle(el) {
+        const state = el.checked ? 'on' : 'off';
+
+        Swal.fire({
+            title: `${state === 'on' ? 'Enabling' : 'Disabling'} Locker Access...`,
+            text: `Sending ${state} command to locker system...`,
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => Swal.showLoading()
         });
 
-        if (compartmentId) {
-            Swal.fire({
-                title: 'Opening Locker...',
-                text: `${compartmentId.replace('compartment', 'Compartment ')} is being opened`,
-                icon: 'success',
-                timer: 2000,
-                showConfirmButton: false,
-                timerProgressBar: true
+        try {
+            const formData = new FormData();
+            formData.append('action', 'toggle_permission');
+            formData.append('value', state);
+
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
             });
+
+            const result = await response.json();
+            if (result.success) {
+                Swal.fire({
+                    title: `Locker ${state === 'on' ? 'Enabled' : 'Disabled'}!`,
+                    text: `Locker access has been ${state === 'on' ? 'enabled' : 'disabled'}.`,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    timerProgressBar: true
+                });
+            } else {
+                throw new Error(result.error || 'Failed to update locker state.');
+            }
+        } catch (error) {
+            Swal.fire({
+                title: 'Error',
+                text: error.message || 'An error occurred while updating locker state.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
+            el.checked = !el.checked; // Revert toggle on error
         }
     }
 
-    async function resetSecurity() {
-        const { value: compartmentId } = await Swal.fire({
-            title: 'Reset Security Mode',
-            text: 'Select compartment to reset security',
-            input: 'select',
-            inputOptions: {
-                'compartment1': 'Compartment 1',
-                'compartment2': 'Compartment 2'
-            },
-            inputPlaceholder: 'Choose a compartment',
-            showCancelButton: true,
-            confirmButtonText: 'Reset Security',
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            icon: 'warning'
+    async function handleResetSecurityToggle(el) {
+        const state = el.checked ? 'on' : 'off';
+
+        Swal.fire({
+            title: `${state === 'on' ? 'Enabling' : 'Disabling'} Security Reset...`,
+            text: `Sending ${state} command to locker system...`,
+            icon: 'warning',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => Swal.showLoading()
         });
 
-        if (compartmentId) {
-            try {
-                // Show loading
+        try {
+            const formData = new FormData();
+            formData.append('action', 'toggle_reset');
+            formData.append('value', state);
+
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
                 Swal.fire({
-                    title: 'Resetting Security...',
-                    allowOutsideClick: false,
+                    title: `Security Reset ${state === 'on' ? 'Enabled' : 'Disabled'}!`,
+                    text: `Security reset feature has been ${state === 'on' ? 'enabled' : 'disabled'}.`,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981',
+                    timer: 2000,
                     showConfirmButton: false,
-                    willOpen: () => {
-                        Swal.showLoading();
-                    }
+                    timerProgressBar: true
                 });
-
-                // Send reset request to server
-                const formData = new FormData();
-                formData.append('action', 'reset_security');
-                formData.append('compartment_id', compartmentId);
-
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    Swal.fire({
-                        title: 'Security Reset Successfully!',
-                        text: `${compartmentId.replace('compartment', 'Compartment ')} has been reset to default state`,
-                        icon: 'success',
-                        confirmButtonColor: '#10b981',
-                        timer: 3000,
-                        timerProgressBar: true
-                    });
-                    
-                    // Force refresh data
-                    fetchData();
-                } else {
-                    throw new Error(result.error || 'Reset failed');
-                }
-            } catch (error) {
-                Swal.fire({
-                    title: 'Reset Failed',
-                    text: 'Could not reset security mode. Please try again.',
-                    icon: 'error',
-                    confirmButtonColor: '#ef4444'
-                });
+            } else {
+                throw new Error(result.error || 'Failed to update reset state.');
             }
+        } catch (error) {
+            Swal.fire({
+                title: 'Error',
+                text: error.message || 'An error occurred while updating security reset.',
+                icon: 'error',
+                confirmButtonColor: '#ef4444'
+            });
+            el.checked = !el.checked; // Revert toggle on error
         }
     }
+
+
 
     async function fetchData() {
         try {
