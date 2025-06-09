@@ -32,6 +32,34 @@ try {
         }
     }
 
+    // === Toggle submitted_delivery flag ===
+    if (isset($_POST['action']) && $_POST['action'] === 'toggle_submitted_delivery') {
+        $newValue = ($_POST['value'] === 'on') ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE control_flags SET submitted_delivery = ? WHERE id = 1");
+        $stmt->execute([$newValue]);
+
+        echo json_encode(["success" => true, "message" => "submitted_delivery updated."]);
+        exit;
+    }
+
+    // === Toggle alert_user flag ===
+    if (isset($_POST['action']) && $_POST['action'] === 'toggle_alert_user') {
+        $newValue = ($_POST['value'] === 'on') ? 1 : 0;
+        $stmt = $pdo->prepare("UPDATE control_flags SET alert_user = ? WHERE id = 1");
+        $stmt->execute([$newValue]);
+
+        echo json_encode(["success" => true, "message" => "alert_user updated."]);
+        exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['check_alert_user'])) {
+    $stmt = $pdo->query("SELECT alert_user FROM control_flags WHERE id = 1");
+    $row = $stmt->fetch();
+    echo json_encode($row);
+    exit;
+    }
+
+
     // ESP32 GET request for current control flags
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['get_control_flags'])) {
         $stmt = $pdo->query("SELECT permission_granted, reset_triggered FROM control_flags LIMIT 1");
@@ -114,6 +142,12 @@ try {
 }
 ?>
 
+<?php
+// Fetch alert_user flag to use in initial page load or for JS polling
+$alertCheck = $pdo->query("SELECT alert_user FROM control_flags WHERE id = 1")->fetch();
+$alertUser = $alertCheck['alert_user'];
+?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -144,6 +178,85 @@ try {
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/daisyui@3.8.1/dist/full.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    let alertShown = false;
+
+    // Initial value from PHP
+    let initialAlertUser = <?= $alertUser ?>;
+    if (initialAlertUser == 1) {
+        triggerAccessAlert();
+    }
+
+    // Poll every 3 seconds
+    setInterval(() => {
+        fetch(window.location.href + '?check_alert_user=1')
+            .then(response => response.json())
+            .then(data => {
+                if (data.alert_user == 1 && !alertShown) {
+                    triggerAccessAlert();
+                }
+            });
+    }, 3000);
+
+    function triggerAccessAlert() {
+        alertShown = true;
+
+        Swal.fire({
+            title: 'Someone is Requesting Access',
+            text: 'Are you expecting any delivery at this moment?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Allow Access',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'swal2-confirm-custom',
+                cancelButton: 'swal2-cancel-custom'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=toggle_reset&value=on'
+                }).then(() => {
+                    Swal.fire({
+                        title: 'Access Granted!',
+                        text: 'Locker is now open.',
+                        icon: 'success',
+                        confirmButtonText: 'Got it',
+                        customClass: {
+                            confirmButton: 'swal2-confirm-custom'
+                        },
+                        buttonsStyling: false
+                    });
+                }).catch(() => {
+                    Swal.fire({
+                        title: 'Connection Error',
+                        text: 'Unable to communicate with the server.',
+                        icon: 'error',
+                        confirmButtonText: 'Retry',
+                        customClass: {
+                            confirmButton: 'swal2-confirm-custom'
+                        },
+                        buttonsStyling: false
+                    });
+                });
+            }
+
+            // Always reset alert_user
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=toggle_alert_user&value=off'
+            }).then(() => {
+                alertShown = false;
+            });
+        });
+    }
+    </script>
     <style>
         @keyframes fadeHighlight {
             0% { background-color: #e8f5e9; }
@@ -205,6 +318,22 @@ try {
         .status-available:hover {
             animation: glow 1s ease-in-out;
         }
+        .swal2-confirm-custom {
+            background-color: #3085d6;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+        }
+        .swal2-cancel-custom {
+            background-color: #aaa;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+        }
+
+        
     </style>
 </head>
 <body class="font-inter bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-700 min-h-screen text-gray-800">
@@ -302,7 +431,7 @@ try {
 
             <!-- Reset Security Toggle -->
             <label class="flex items-center gap-3 cursor-pointer">
-                <span class="text-gray-700 font-medium">🔄 Security Mode</span>
+                <span class="text-gray-700 font-medium">🔄 Disable Security Mode</span>
                 <div class="relative flex items-center">
                     <input type="checkbox" id="resetSecurityToggle" class="sr-only peer" onchange="handleResetSecurityToggle(this)">
                     <div class="w-14 h-8 bg-gray-300 rounded-full peer-checked:bg-red-500 transition-colors duration-300"></div>
