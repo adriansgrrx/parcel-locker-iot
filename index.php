@@ -144,8 +144,9 @@ try {
 
 <?php
 // Fetch alert_user flag to use in initial page load or for JS polling
-$alertCheck = $pdo->query("SELECT alert_user FROM control_flags WHERE id = 1")->fetch();
-$alertUser = $alertCheck['alert_user'];
+$flagsCheck = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1")->fetch();
+$alertUser = $flagsCheck['alert_user'];
+$submittedDelivery = $flagsCheck['submitted_delivery'];
 ?>
 
 
@@ -203,19 +204,19 @@ $alertUser = $alertCheck['alert_user'];
         alertShown = true;
 
         Swal.fire({
-            title: 'Someone is Requesting Access',
-            text: 'Are you expecting any delivery at this moment?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Allow Access',
-            cancelButtonText: 'Cancel',
-            reverseButtons: true,
-            customClass: {
-                confirmButton: 'swal2-confirm-custom',
-                cancelButton: 'swal2-cancel-custom'
-            },
-            buttonsStyling: false
-        }).then((result) => {
+        title: 'Someone is Requesting Access',
+        html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
+        icon: 'info',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: '!rounded-xl !shadow-md',
+            closeButton: 'text-gray-500 hover:text-red-500 focus:outline-none text-xl',
+            title: '!text-lg !font-semibold text-gray-800',
+            htmlContainer: '!text-sm text-gray-600'
+        },
+        buttonsStyling: false
+    }).then((result) => {
             if (result.isConfirmed) {
                 fetch(window.location.href, {
                     method: 'POST',
@@ -256,6 +257,26 @@ $alertUser = $alertCheck['alert_user'];
             });
         });
     }
+
+    function triggerParcelArrivedAlert() {
+        Swal.fire({
+            title: 'Parcel Delivered!',
+            html: 'A parcel has just been placed in your locker. You may now retrieve it.',
+            icon: 'success',
+            timer: 5000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            showCloseButton: true,
+            customClass: {
+                popup: '!rounded-xl !shadow-md',
+                closeButton: 'text-gray-500 hover:text-green-500 focus:outline-none text-xl',
+                title: '!text-lg !font-semibold text-gray-800',
+                htmlContainer: '!text-sm text-gray-600'
+            },
+            buttonsStyling: false
+        });
+    }
+
     </script>
     <style>
         @keyframes fadeHighlight {
