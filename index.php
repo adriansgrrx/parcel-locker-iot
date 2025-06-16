@@ -13,17 +13,36 @@ $options = [
 
 try {
     $pdo = new PDO($dsn, $user, $pass, $options);
+    $flagsCheck = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1")->fetch();
+    $alertUser = $flagsCheck['alert_user'];
+    $submittedDelivery = $flagsCheck['submitted_delivery'];
     
     // === Handle AJAX requests for checking alerts ===
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && (isset($_GET['check_alert_user']) || isset($_GET['check_submit_delivery']))) {
-        $stmt = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1");
-        $row = $stmt->fetch();
-        
-        // Return both values for polling
-        echo json_encode([
-            'alert_user' => $row['alert_user'],
-            'submit_delivery' => $row['submitted_delivery']  // Note: submit_delivery in response
-        ]);
+        try {
+            $stmt = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1");
+            $row = $stmt->fetch();
+            
+            if ($row) {
+                // Return both values for polling
+                echo json_encode([
+                    'alert_user' => (int)$row['alert_user'],
+                    'submit_delivery' => (int)$row['submitted_delivery']
+                ]);
+            } else {
+                // No row found, return default values
+                echo json_encode([
+                    'alert_user' => 0,
+                    'submit_delivery' => 0
+                ]);
+            }
+        } catch (PDOException $e) {
+            // Handle database query error specifically for polling
+            echo json_encode([
+                'success' => false,
+                'error' => 'Database query failed: ' . $e->getMessage()
+            ]);
+        }
         exit;
     }
 
@@ -153,16 +172,18 @@ try {
         exit;
     }
 } catch (PDOException $e) {
-    echo json_encode(["success" => false, "error" => $e->getMessage()]);
-    exit;
+    // Handle initial connection errors
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && (isset($_GET['check_alert_user']) || isset($_GET['check_submit_delivery']))) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database connection failed: ' . $e->getMessage()
+        ]);
+        exit;
+    } else {
+        echo json_encode(["success" => false, "error" => $e->getMessage()]);
+        exit;
+    }
 }
-?>
-
-<?php
-// Fetch alert_user flag to use in initial page load or for JS polling
-$flagsCheck = $pdo->query("SELECT alert_user, submitted_delivery FROM control_flags WHERE id = 1")->fetch();
-$alertUser = $flagsCheck['alert_user'];
-$submittedDelivery = $flagsCheck['submitted_delivery'];
 ?>
 
 <!DOCTYPE html>
@@ -194,128 +215,6 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/daisyui@3.8.1/dist/full.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-    let alertShown = false;
-    let parcelAlertShown = false;
-    
-    //* Initial values from PHP*
-    let initialAlertUser = <?= $alertUser ?>;
-    let initialSubmitDelivery = <?= $submittedDelivery ?>; // Fixed variable name
-    
-    if (initialAlertUser == 1) {
-        triggerAccessAlert();
-    }
-    
-    if (initialSubmitDelivery == 1) {
-        triggerParcelArrivedAlert();
-    }
-    
-    //* Poll every 3 seconds*
-    setInterval(() => {
-        fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
-            .then(response => response.json())
-            .then(data => {
-                // Check for access alert
-                if (data.alert_user == 1 && !alertShown) {
-                    triggerAccessAlert();
-                }
-                
-                // Check for parcel delivery alert
-                if (data.submit_delivery == 1 && !parcelAlertShown) {
-                    triggerParcelArrivedAlert();
-                }
-            })
-            .catch(error => {
-                console.error('Polling error:', error);
-            });
-    }, 3000);
-    
-    function triggerAccessAlert() {
-        alertShown = true;
-        Swal.fire({
-        title: 'Someone is Requesting Access',
-        html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
-        icon: 'info',
-        showConfirmButton: false,
-        showCloseButton: true,
-        customClass: {
-            popup: '!rounded-xl !shadow-md',
-            closeButton: 'text-gray-500 hover:text-red-500 focus:outline-none text-xl',
-            title: '!text-lg !font-semibold text-gray-800',
-            htmlContainer: '!text-sm text-gray-600'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(window.location.href, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'action=toggle_reset&value=on'
-                }).then(() => {
-                    Swal.fire({
-                        title: 'Access Granted!',
-                        text: 'Locker is now open.',
-                        icon: 'success',
-                        confirmButtonText: 'Got it',
-                        customClass: {
-                            confirmButton: 'swal2-confirm-custom'
-                        },
-                        buttonsStyling: false
-                    });
-                }).catch(() => {
-                    Swal.fire({
-                        title: 'Connection Error',
-                        text: 'Unable to communicate with the server.',
-                        icon: 'error',
-                        confirmButtonText: 'Retry',
-                        customClass: {
-                            confirmButton: 'swal2-confirm-custom'
-                        },
-                        buttonsStyling: false
-                    });
-                });
-            }
-            //* Always reset alert_user*
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=toggle_alert_user&value=off'
-            }).then(() => {
-                alertShown = false;
-            });
-        });
-    }
-    
-    function triggerParcelArrivedAlert() {
-        parcelAlertShown = true;
-        Swal.fire({
-            title: 'Parcel Delivered!',
-            html: 'A parcel has just been placed in your locker. You may now retrieve it.',
-            icon: 'success',
-            timer: 5000,
-            timerProgressBar: true,
-            showConfirmButton: false,
-            showCloseButton: true,
-            customClass: {
-                popup: '!rounded-xl !shadow-md',
-                closeButton: 'text-gray-500 hover:text-green-500 focus:outline-none text-xl',
-                title: '!text-lg !font-semibold text-gray-800',
-                htmlContainer: '!text-sm text-gray-600'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            //* Always reset submit_delivery after alert is shown/closed*
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'action=toggle_submit_delivery&value=off'
-            }).then(() => {
-                parcelAlertShown = false;
-            });
-        });
-    }
-</script>
     <style>
         @keyframes fadeHighlight {
             0% { background-color: #e8f5e9; }
@@ -532,6 +431,189 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
     </div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let alertShown = false;
+let parcelAlertShown = false;
+
+//* Initial values from PHP*
+let initialAlertUser = <?= $alertUser ?>;
+let initialSubmitDelivery = <?= $submittedDelivery ?>; // Fixed variable name
+
+if (initialAlertUser == 1) {
+    triggerAccessAlert();
+}
+
+if (initialSubmitDelivery == 1) {
+    triggerParcelArrivedAlert();
+}
+
+//* Poll every 3 seconds*
+// setInterval(() => {
+//     fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
+//         .then(response => response.json())
+//         .then(data => {
+//             // Check for access alert
+//             if (data.alert_user == 1 && !alertShown) {
+//                 triggerAccessAlert();
+//             }
+            
+//             // Check for parcel delivery alert
+//             if (data.submit_delivery == 1 && !parcelAlertShown) {
+//                 triggerParcelArrivedAlert();
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Polling error:', error);
+//         });
+// }, 3000);
+
+// document.addEventListener('DOMContentLoaded', () => {
+// setInterval(() => {
+//     fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
+//         .then(response => response.json())
+//         .then(data => {
+//             console.log('Polled data:', data);  // ✅ confirm data is read
+
+//             if (data.alert_user == 1 && !alertShown) {
+//                 triggerAccessAlert();  // ✅ this runs now safely
+//             }
+
+//             if (data.submit_delivery == 1 && !parcelAlertShown) {
+//                 triggerParcelArrivedAlert();
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Polling error:', error);
+//         });
+// }, 3000);
+// });
+document.addEventListener('DOMContentLoaded', () => {
+    setInterval(() => {
+        // Create a proper URL for polling
+        const pollUrl = new URL(window.location.origin + window.location.pathname);
+        pollUrl.searchParams.set('check_alert_user', '1');
+        pollUrl.searchParams.set('check_submit_delivery', '1');
+        
+        fetch(pollUrl.toString())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Polled data:', data);
+                
+                // Check if the response indicates an error
+                if (data.success === false) {
+                    console.error('Server error:', data.error);
+                    return;
+                }
+                
+                // Handle alerts
+                if (data.alert_user == 1 && !alertShown) {
+                    triggerAccessAlert();
+                }
+
+                if (data.submit_delivery == 1 && !parcelAlertShown) {
+                    triggerParcelArrivedAlert();
+                }
+            })
+            .catch(error => {
+                console.error('Polling error:', error);
+                // Optionally show a less intrusive error notification
+                // Only show after multiple consecutive failures
+            });
+    }, 3000);
+});
+
+function triggerAccessAlert() {
+    alertShown = true;
+    Swal.fire({
+    title: 'Someone is Requesting Access',
+    html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
+    icon: 'info',
+    showConfirmButton: false,
+    showCloseButton: true,
+    customClass: {
+        popup: '!rounded-xl !shadow-md',
+        closeButton: 'text-gray-500 hover:text-red-500 focus:outline-none text-xl',
+        title: '!text-lg !font-semibold text-gray-800',
+        htmlContainer: '!text-sm text-gray-600'
+    },
+    buttonsStyling: false
+}).then((result) => {
+        if (result.isConfirmed) {
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'action=toggle_reset&value=on'
+            }).then(() => {
+                Swal.fire({
+                    title: 'Access Granted!',
+                    text: 'Locker is now open.',
+                    icon: 'success',
+                    confirmButtonText: 'Got it',
+                    customClass: {
+                        confirmButton: 'swal2-confirm-custom'
+                    },
+                    buttonsStyling: false
+                });
+            }).catch(() => {
+                Swal.fire({
+                    title: 'Connection Error',
+                    text: 'Unable to communicate with the server.',
+                    icon: 'error',
+                    confirmButtonText: 'Retry',
+                    customClass: {
+                        confirmButton: 'swal2-confirm-custom'
+                    },
+                    buttonsStyling: false
+                });
+            });
+        }
+        //* Always reset alert_user*
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'action=toggle_alert_user&value=off'
+        }).then(() => {
+            alertShown = false;
+        });
+    });
+}
+
+function triggerParcelArrivedAlert() {
+    parcelAlertShown = true;
+    Swal.fire({
+        title: 'Parcel Delivered!',
+        html: 'A parcel has just been placed in your locker. You may now retrieve it.',
+        icon: 'success',
+        timer: 5000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: '!rounded-xl !shadow-md',
+            closeButton: 'text-gray-500 hover:text-green-500 focus:outline-none text-xl',
+            title: '!text-lg !font-semibold text-gray-800',
+            htmlContainer: '!text-sm text-gray-600'
+        },
+        buttonsStyling: false
+    }).then((result) => {
+        //* Always reset submit_delivery after alert is shown/closed*
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'action=toggle_submit_delivery&value=off'
+        }).then(() => {
+            parcelAlertShown = false;
+        });
+    });
+}
+</script>
+</body>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     const statusMap = {
@@ -770,5 +852,4 @@ $submittedDelivery = $flagsCheck['submitted_delivery'];
         setInterval(fetchData, 5000);
     });
 </script>
-</body>
 </html>

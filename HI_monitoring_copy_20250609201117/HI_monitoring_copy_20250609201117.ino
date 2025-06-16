@@ -4,6 +4,13 @@
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 
+
+// const char WIFI_SSID[] = "Adrian";     // CHANGE IT
+// const char WIFI_PASSWORD[] = "eds1234567";         // CHANGE IT
+
+// // Server settings
+// String HOST_NAME = "http://172.20.10.2"; 
+
 // Wi-Fi credentials
 const char WIFI_SSID[] = "PSD Tenant";     // CHANGE IT
 const char WIFI_PASSWORD[] = "PSD1ntern3t";         // CHANGE IT
