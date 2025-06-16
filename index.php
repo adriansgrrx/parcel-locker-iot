@@ -332,16 +332,16 @@ try {
                 <div class="text-4xl sm:text-6xl mb-4">📦</div>
                 <div class="mt-4 pt-4 border-t border-gray-200 text-left space-y-2">
                     <div class="flex justify-between text-xs sm:text-sm">
-                        <span class="text-gray-600">Distance:</span>
-                        <span id="distance1" class="font-mono font-medium">--</span>
-                    </div>
-                    <div class="flex justify-between text-xs sm:text-sm">
                         <span class="text-gray-600">Parcel Detected:</span>
-                        <span id="parcel1" class="font-mono font-medium">--</span>
+                        <span id="parcel-detected1" class="font-mono font-medium">--</span>
                     </div>
                     <div class="flex justify-between text-xs sm:text-sm">
-                        <span class="text-gray-600">Security Mode:</span>
-                        <span id="security1" class="font-mono font-medium">--</span>
+                        <span class="text-gray-600">Date:</span>
+                        <span id="date1" class="font-mono font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-xs sm:text-sm">
+                        <span class="text-gray-600">Time:</span>
+                        <span id="time1" class="font-mono font-medium">--</span>
                     </div>
                 </div>
             </div>
@@ -355,16 +355,16 @@ try {
                 <div class="text-4xl sm:text-6xl mb-4">📦</div>
                 <div class="mt-4 pt-4 border-t border-gray-200 text-left space-y-2">
                     <div class="flex justify-between text-xs sm:text-sm">
-                        <span class="text-gray-600">Distance:</span>
-                        <span id="distance2" class="font-mono font-medium">--</span>
-                    </div>
-                    <div class="flex justify-between text-xs sm:text-sm">
                         <span class="text-gray-600">Parcel Detected:</span>
-                        <span id="parcel2" class="font-mono font-medium">--</span>
+                        <span id="parcel-detected2" class="font-mono font-medium">--</span>
                     </div>
                     <div class="flex justify-between text-xs sm:text-sm">
-                        <span class="text-gray-600">Security Mode:</span>
-                        <span id="security2" class="font-mono font-medium">--</span>
+                        <span class="text-gray-600">Date:</span>
+                        <span id="date2" class="font-mono font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-xs sm:text-sm">
+                        <span class="text-gray-600">Time:</span>
+                        <span id="time2" class="font-mono font-medium">--</span>
                     </div>
                 </div>
             </div>
@@ -448,46 +448,6 @@ if (initialSubmitDelivery == 1) {
     triggerParcelArrivedAlert();
 }
 
-//* Poll every 3 seconds*
-// setInterval(() => {
-//     fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
-//         .then(response => response.json())
-//         .then(data => {
-//             // Check for access alert
-//             if (data.alert_user == 1 && !alertShown) {
-//                 triggerAccessAlert();
-//             }
-            
-//             // Check for parcel delivery alert
-//             if (data.submit_delivery == 1 && !parcelAlertShown) {
-//                 triggerParcelArrivedAlert();
-//             }
-//         })
-//         .catch(error => {
-//             console.error('Polling error:', error);
-//         });
-// }, 3000);
-
-// document.addEventListener('DOMContentLoaded', () => {
-// setInterval(() => {
-//     fetch(window.location.href + '?check_alert_user=1&check_submit_delivery=1')
-//         .then(response => response.json())
-//         .then(data => {
-//             console.log('Polled data:', data);  // ✅ confirm data is read
-
-//             if (data.alert_user == 1 && !alertShown) {
-//                 triggerAccessAlert();  // ✅ this runs now safely
-//             }
-
-//             if (data.submit_delivery == 1 && !parcelAlertShown) {
-//                 triggerParcelArrivedAlert();
-//             }
-//         })
-//         .catch(error => {
-//             console.error('Polling error:', error);
-//         });
-// }, 3000);
-// });
 document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => {
         // Create a proper URL for polling
@@ -782,10 +742,29 @@ function triggerParcelArrivedAlert() {
                 statusElement.textContent = label;
                 statusElement.className = `px-3 py-1 rounded-xl text-xs font-medium uppercase tracking-wide ${cssClass}`;
                 
-                document.getElementById(`distance${cid}`).textContent = comp.distance_cm + " cm";
-                document.getElementById(`parcel${cid}`).textContent = comp.is_parcel_detected ? "Yes" : "No";
-                document.getElementById(`security${cid}`).textContent = comp.is_security_mode ? "On" : "Off";
+                document.getElementById(`parcel-detected${cid}`).textContent = comp.is_parcel_detected ? "Yes" : "No";
                 
+
+                const timestamp = new Date(comp.timestamp);
+
+                // Format date: "June 23, 2025"
+                const formattedDate = timestamp.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                // Format time: "1:24 PM"
+                const formattedTime = timestamp.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                // Set values
+                document.getElementById(`date${cid}`).textContent = formattedDate;
+                document.getElementById(`time${cid}`).textContent = formattedTime;
+                                
                 // Update visual appearance
                 updateCompartmentVisuals(cid, comp.status);
             });
