@@ -409,10 +409,10 @@ try {
                 <div class="flex items-center gap-2">
                     <label for="event-limit" class="text-sm text-gray-700 font-medium">Show:</label>
                     <select id="event-limit" class="border border-gray-300 rounded-lg text-sm px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+                        <option value="5">Last 5</option>
+                        <option value="10" selected>Last 10</option>
                         <option value="25">Last 25</option>
-                        <option value="50" selected>Last 50</option>
-                        <option value="100">Last 100</option>
-                        <option value="200">Last 200</option>
+                        <option value="50">Last 50</option>
                     </select>
                     <!-- Loading indicator -->
                     <div id="events-loading" class="hidden">
@@ -426,6 +426,7 @@ try {
                 <table class="w-full">
                     <thead>
                         <tr class="border-b-2 border-gray-200 bg-gray-50">
+                            <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Number</th>
                             <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Compartment</th>
                             <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Status</th>
                             <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Timestamp</th>
@@ -658,6 +659,41 @@ function triggerParcelArrivedAlert() {
         }
     }
 
+    function updateEventsTable(data) {
+        const tableBody = document.getElementById("events-table-body");
+        const noEventsDiv = document.getElementById("no-events");
+
+        // Get the selected limit from the dropdown
+        const limit = parseInt(document.getElementById("event-limit").value);
+
+        tableBody.innerHTML = "";
+
+        if (data.events && data.events.length > 0) {
+            noEventsDiv.classList.add("hidden");
+
+            // Show only the first 'limit' number of events
+            const eventsToShow = data.events.slice(0, limit);
+
+            eventsToShow.forEach((ev, index) => {
+                const row = document.createElement("tr");
+                row.className = "hover:bg-gray-50 transition-colors duration-200";
+
+                const compartmentNo = ev.compartment_id.replace('compartment', '');
+
+                row.innerHTML = `
+                    <td class="py-3 px-2 sm:px-4 font-mono font-medium text-sm sm:text-base">${index + 1}</td> <!-- Number -->
+                    <td class="py-3 px-2 sm:px-4">${compartmentNo}</td>
+                    <td class="py-3 px-2 sm:px-4">${getStatusBadge(ev.status)}</td>
+                    <td class="py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm text-gray-600">${formatTimestamp(ev.timestamp)}</td>
+                `;
+
+                tableBody.appendChild(row);
+            });
+        } else {
+            noEventsDiv.classList.remove("hidden");
+        }
+    }
+
 
     async function handleOpenLockerToggle(el) {
         const state = el.checked ? 'on' : 'off';
@@ -753,12 +789,13 @@ function triggerParcelArrivedAlert() {
         }
     }
 
+    let data = {};
 
 
     async function fetchData() {
         try {
             const res = await fetch("?fetch=1");
-            const data = await res.json();
+            data = await res.json();
 
             // Update compartments
             data.compartments.forEach(comp => {
@@ -796,32 +833,65 @@ function triggerParcelArrivedAlert() {
                 updateCompartmentVisuals(cid, comp.status);
             });
 
-            // Update events table
+            // // Update events table
+
+            const limit = parseInt(document.getElementById("event-limit").value);
             const tableBody = document.getElementById("events-table-body");
             const noEventsDiv = document.getElementById("no-events");
-            
+
             if (data.events && data.events.length > 0) {
                 tableBody.innerHTML = "";
                 noEventsDiv.classList.add("hidden");
-                
-                data.events.forEach(ev => {
+
+                const eventsToShow = data.events.slice(0, limit);
+
+                eventsToShow.forEach((ev, index) => {
                     const row = document.createElement("tr");
                     row.className = "hover:bg-gray-50 transition-colors duration-200";
-                    
+
                     const compartmentNo = ev.compartment_id.replace('compartment', '');
-                    
+
                     row.innerHTML = `
-                        <td class="py-3 px-2 sm:px-4 font-mono font-medium text-sm sm:text-base">${compartmentNo}</td>
+                        <td class="py-3 px-2 sm:px-4 font-mono font-medium text-sm sm:text-base">${index + 1}</td> <!-- Numbering -->
+                        <td class="py-3 px-2 sm:px-4">${compartmentNo}</td>
                         <td class="py-3 px-2 sm:px-4">${getStatusBadge(ev.status)}</td>
                         <td class="py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm text-gray-600">${formatTimestamp(ev.timestamp)}</td>
                     `;
-                    
+
                     tableBody.appendChild(row);
                 });
             } else {
                 tableBody.innerHTML = "";
                 noEventsDiv.classList.remove("hidden");
             }
+
+
+            // // Update events table
+            // const tableBody = document.getElementById("events-table-body");
+            // const noEventsDiv = document.getElementById("no-events");
+            
+            // if (data.events && data.events.length > 0) {
+            //     tableBody.innerHTML = "";
+            //     noEventsDiv.classList.add("hidden");
+                
+            //     data.events.forEach(ev => {
+            //         const row = document.createElement("tr");
+            //         row.className = "hover:bg-gray-50 transition-colors duration-200";
+                    
+            //         const compartmentNo = ev.compartment_id.replace('compartment', '');
+                    
+            //         row.innerHTML = `
+            //             <td class="py-3 px-2 sm:px-4 font-mono font-medium text-sm sm:text-base">${compartmentNo}</td>
+            //             <td class="py-3 px-2 sm:px-4">${getStatusBadge(ev.status)}</td>
+            //             <td class="py-3 px-2 sm:px-4 font-mono text-xs sm:text-sm text-gray-600">${formatTimestamp(ev.timestamp)}</td>
+            //         `;
+                    
+            //         tableBody.appendChild(row);
+            //     });
+            // } else {
+            //     tableBody.innerHTML = "";
+            //     noEventsDiv.classList.remove("hidden");
+            // }
         } catch (e) {
             console.error("Fetch failed", e);
             
@@ -857,5 +927,10 @@ function triggerParcelArrivedAlert() {
         fetchData();
         setInterval(fetchData, 5000);
     });
+
+    document.getElementById("event-limit").addEventListener("change", () => {
+    updateEventsTable(eventData); // reuse the stored data without re-fetching
+    });
+
 </script>
 </html>
