@@ -327,6 +327,7 @@ try {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
+            plugins: [daisyui],
             theme: {
                 extend: {
                     fontFamily: {
@@ -338,8 +339,7 @@ try {
                         'fade-highlight': 'fadeHighlight 1s ease-in-out',
                         'blink-red': 'blinkRed 1s infinite',
                         'shake': 'shake 0.5s ease-in-out',
-                        'glow': 'glow 2s ease-in-out infinite alternate',
-                        'count-up': 'countUp 0.8s ease-out'
+                        'glow': 'glow 2s ease-in-out infinite alternate'
                     }
                 }
             }
@@ -422,10 +422,6 @@ try {
             border: none;
         }
 
-        .parcel-counter {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
-            border: 2px solid rgba(59, 130, 246, 0.3);
-        }
         
     </style>
 </head>
@@ -651,7 +647,6 @@ try {
     //* Initial values from PHP*
     let initialAlertUser = <?= $alertUser ?>;
     let initialSubmitDelivery = <?= $submittedDelivery ?>; // Fixed variable name
-    let previousParcelCounts = { c1: 0, c2: 0, total: 0 };
 
     if (initialAlertUser == 1) {
         triggerAccessAlert();
@@ -662,13 +657,6 @@ try {
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Initial fetch of parcel counters
-        fetchParcelCounts();
-
-        // Fetch parcel counters every 3 seconds
-        setInterval(fetchParcelCounts, 3000);
-
-        // Poll for alerts every 3 seconds
         setInterval(() => {
             // Create a proper URL for polling
             const pollUrl = new URL(window.location.origin + window.location.pathname);
@@ -702,39 +690,64 @@ try {
                 })
                 .catch(error => {
                     console.error('Polling error:', error);
+                    // Optionally show a less intrusive error notification
+                    // Only show after multiple consecutive failures
                 });
         }, 3000);
-
-        // Load weekly chart data
-        fetchWeeklyParcelData();
     });
 
-
     function triggerAccessAlert() {
-        parcelAlertShown = true;
+        alertShown = true;
         Swal.fire({
-            title: 'Someone is Requesting Access',
-            html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
-            icon: 'success',
-            timer: 5000,
-            timerProgressBar: true,
-            showConfirmButton: false,
-            showCloseButton: true,
-            customClass: {
-                popup: '!rounded-xl !shadow-md',
-                closeButton: 'text-gray-500 hover:text-green-500 focus:outline-none text-xl',
-                title: '!text-lg !font-semibold text-gray-800',
-                htmlContainer: '!text-sm text-gray-600'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            //* Always reset submit_delivery after alert is shown/closed*
+        title: 'Someone is Requesting Access',
+        html: 'A rider is at the locker.<br>Please enable the <strong>Open Locker</strong> switch manually if you are expecting a delivery.',
+        icon: 'info',
+        showConfirmButton: false,
+        showCloseButton: true,
+        customClass: {
+            popup: '!rounded-xl !shadow-md',
+            closeButton: 'text-gray-500 hover:text-red-500 focus:outline-none text-xl',
+            title: '!text-lg !font-semibold text-gray-800',
+            htmlContainer: '!text-sm text-gray-600'
+        },
+        buttonsStyling: false
+    }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=toggle_reset&value=on'
+                }).then(() => {
+                    Swal.fire({
+                        title: 'Access Granted!',
+                        text: 'Locker is now open.',
+                        icon: 'success',
+                        confirmButtonText: 'Got it',
+                        customClass: {
+                            confirmButton: 'swal2-confirm-custom'
+                        },
+                        buttonsStyling: false
+                    });
+                }).catch(() => {
+                    Swal.fire({
+                        title: 'Connection Error',
+                        text: 'Unable to communicate with the server.',
+                        icon: 'error',
+                        confirmButtonText: 'Retry',
+                        customClass: {
+                            confirmButton: 'swal2-confirm-custom'
+                        },
+                        buttonsStyling: false
+                    });
+                });
+            }
+            //* Always reset alert_user*
             fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'action=toggle_alert_user&value=off'
             }).then(() => {
-                parcelAlertShown = false;
+                alertShown = false;
             });
         });
     }
