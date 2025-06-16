@@ -401,17 +401,32 @@ try {
             </div>
         </div>
 
-
         <!-- Recent Events Section -->
         <div class="bg-white/95 rounded-2xl p-6 sm:p-8 shadow-xl">
-            <div class="text-xl sm:text-2xl font-semibold mb-6 text-gray-800">Recent Events</div>
-            
+            <!-- Heading and Dropdown in one row -->
+            <div class="flex justify-between items-center mb-6">
+                <div class="text-xl sm:text-2xl font-semibold text-gray-800">Activity Log</div>
+                <div class="flex items-center gap-2">
+                    <label for="event-limit" class="text-sm text-gray-700 font-medium">Show:</label>
+                    <select id="event-limit" class="border border-gray-300 rounded-lg text-sm px-3 py-2 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+                        <option value="25">Last 25</option>
+                        <option value="50" selected>Last 50</option>
+                        <option value="100">Last 100</option>
+                        <option value="200">Last 200</option>
+                    </select>
+                    <!-- Loading indicator -->
+                    <div id="events-loading" class="hidden">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Events Table -->
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="border-b-2 border-gray-200">
-                            <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Compartment No.</th>
+                        <tr class="border-b-2 border-gray-200 bg-gray-50">
+                            <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Compartment</th>
                             <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Status</th>
                             <th class="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 text-sm sm:text-base">Timestamp</th>
                         </tr>
@@ -420,14 +435,26 @@ try {
                         <!-- Events will be populated here -->
                     </tbody>
                 </table>
-                
+
                 <!-- Empty state -->
-                <div id="no-events" class="text-center py-8 text-gray-500 hidden">
-                    <div class="text-3xl sm:text-4xl mb-2">📋</div>
-                    <p class="text-sm sm:text-base">No recent events to display</p>
+                <div id="no-events" class="text-center py-12 text-gray-500 hidden">
+                    <div class="text-4xl mb-3">📋</div>
+                    <p class="text-base font-medium">No recent events to display</p>
+                    <p class="text-sm text-gray-400 mt-1">Events will appear here when compartment activities occur</p>
+                </div>
+
+                <!-- Error state -->
+                <div id="events-error" class="text-center py-12 text-red-500 hidden">
+                    <div class="text-4xl mb-3">⚠️</div>
+                    <p class="text-base font-medium">Failed to load events</p>
+                    <button onclick="fetchEventsWithLimit(document.getElementById('event-limit').value)" 
+                            class="mt-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                        Try Again
+                    </button>
                 </div>
             </div>
         </div>
+
     </div>
 </main>
 
