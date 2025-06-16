@@ -339,10 +339,10 @@ try {
                         <span class="text-gray-600">Date:</span>
                         <span id="date1" class="font-mono font-medium">--</span>
                     </div>
-                    <div class="flex justify-between text-xs sm:text-sm">
+                    <!-- <div class="flex justify-between text-xs sm:text-sm">
                         <span class="text-gray-600">Time:</span>
                         <span id="time1" class="font-mono font-medium">--</span>
-                    </div>
+                    </div> -->
                 </div>
             </div>
 
@@ -362,10 +362,10 @@ try {
                         <span class="text-gray-600">Date:</span>
                         <span id="date2" class="font-mono font-medium">--</span>
                     </div>
-                    <div class="flex justify-between text-xs sm:text-sm">
+                    <!-- <div class="flex justify-between text-xs sm:text-sm">
                         <span class="text-gray-600">Time:</span>
                         <span id="time2" class="font-mono font-medium">--</span>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -806,7 +806,8 @@ function triggerParcelArrivedAlert() {
                 statusElement.textContent = label;
                 statusElement.className = `px-3 py-1 rounded-xl text-xs font-medium uppercase tracking-wide ${cssClass}`;
                 
-                document.getElementById(`parcel-detected${cid}`).textContent = comp.is_parcel_detected ? "Yes" : "No";
+                document.getElementById(`parcel-detected${cid}`).textContent = comp.status === "Occupied" ? "Yes" : "No";
+
                 
 
                 const timestamp = new Date(comp.timestamp);
@@ -827,7 +828,7 @@ function triggerParcelArrivedAlert() {
 
                 // Set values
                 document.getElementById(`date${cid}`).textContent = formattedDate;
-                document.getElementById(`time${cid}`).textContent = formattedTime;
+                // document.getElementById(`time${cid}`).textContent = formattedTime;
                                 
                 // Update visual appearance
                 updateCompartmentVisuals(cid, comp.status);
