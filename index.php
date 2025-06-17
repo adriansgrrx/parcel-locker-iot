@@ -325,6 +325,7 @@ try {
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <script>
         tailwind.config = {
             theme: {
@@ -345,89 +346,6 @@ try {
             }
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/daisyui@3.8.1/dist/full.js"></script>
-    <style>
-        @keyframes fadeHighlight {
-            0% { background-color: #e8f5e9; }
-            100% { background-color: #f9f9f9; }
-        }
-        
-        @keyframes blinkRed {
-            0%, 50% { background-color: rgba(239, 68, 68, 0.1); }
-            51%, 100% { background-color: rgba(239, 68, 68, 0.3); }
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        
-        @keyframes glow {
-            from { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
-            to { box-shadow: 0 0 30px rgba(34, 197, 94, 0.6); }
-        }
-        
-        .fade-highlight { animation: fadeHighlight 1s ease-in-out; }
-        .blink-red { animation: blinkRed 1s infinite; }
-        .shake { animation: shake 0.5s ease-in-out; }
-        .glow-green { animation: glow 2s ease-in-out infinite alternate; }
-        
-        /* Responsive font sizes */
-        @media (max-width: 640px) {
-            .responsive-title { font-size: 2rem !important; }
-            .responsive-subtitle { font-size: 1rem !important; }
-            .responsive-card-title { font-size: 1.125rem !important; }
-            .responsive-button { font-size: 0.875rem !important; padding: 0.5rem 1rem !important; }
-        }
-        
-        @media (min-width: 641px) and (max-width: 1024px) {
-            .responsive-title { font-size: 2.5rem !important; }
-            .responsive-subtitle { font-size: 1.125rem !important; }
-            .responsive-card-title { font-size: 1.25rem !important; }
-        }
-        
-        /* Status-based backgrounds */
-        .status-available {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
-            border: 2px solid rgba(34, 197, 94, 0.3);
-        }
-        
-        .status-occupied {
-            background: linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(251, 146, 60, 0.05) 100%);
-            border: 2px solid rgba(251, 146, 60, 0.3);
-        }
-        
-        .status-theft {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.1) 100%);
-            border: 2px solid rgba(239, 68, 68, 0.4);
-        }
-        
-        /* Pulse animation for available compartments */
-        .status-available:hover {
-            animation: glow 1s ease-in-out;
-        }
-        .swal2-confirm-custom {
-            background-color: #3085d6;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            border: none;
-        }
-        .swal2-cancel-custom {
-            background-color: #aaa;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            border: none;
-        }
-
-        .parcel-counter {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
-            border: 2px solid rgba(59, 130, 246, 0.3);
-        }
-        
-    </style>
 </head>
 <body class="font-inter bg-gradient-to-br from-indigo-500 via-purple-500 to-purple-700 min-h-screen text-gray-800">
     <!-- Header -->
@@ -528,34 +446,41 @@ try {
             </div>
 
             <!-- Parcel Counter Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
-                <!-- Compartment 1 Counter -->
-                <div class="bg-white/95 rounded-2xl p-4 sm:p-6 text-center shadow-xl">
-                    <div class="text-3xl mb-2">🏠</div>
-                    <div class="text-lg font-semibold text-gray-800 mb-1">Compartment 1</div>
-                    <div class="text-2xl sm:text-3xl font-bold text-blue-600" id="c1-counter">0</div>
-                    <div class="text-xs sm:text-sm text-gray-600">Total Parcels</div>
-                </div>
+            <section class="mb-12">
+                <h3 class="text-1xl sm:text-2xl md:text-3xl font-bold mb-6 text-white text-start">
+                    Today’s Parcel Summary
+                </h3>
 
-                <!-- Compartment 2 Counter -->
-                <div class="bg-white/95 rounded-2xl p-4 sm:p-6 text-center shadow-xl">
-                    <div class="text-3xl mb-2">🏠</div>
-                    <div class="text-lg font-semibold text-gray-800 mb-1">Compartment 2</div>
-                    <div class="text-2xl sm:text-3xl font-bold text-blue-600" id="c2-counter">0</div>
-                    <div class="text-xs sm:text-sm text-gray-600">Total Parcels</div>
-                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Compartment 1 Counter -->
+                    <div class="bg-white/95 rounded-2xl p-6 text-center shadow-xl">
+                        <div class="text-4xl mb-2">📦</div>
+                        <div class="text-lg font-semibold text-gray-800 mb-1">Compartment 1</div>
+                        <div class="text-3xl font-bold text-blue-600" id="c1-counter">0</div>
+                        <div class="text-sm text-gray-600">Total Parcels</div>
+                    </div>
 
-                <!-- Total Counter -->
-                <div class="parcel-counter rounded-2xl p-4 sm:p-6 text-center shadow-xl text-white">
-                    <div class="text-3xl mb-2">📊</div>
-                    <div class="text-lg font-semibold mb-1">Total Delivered</div>
-                    <div class="text-3xl sm:text-4xl font-bold" id="total-counter">0</div>
-                    <div class="text-xs sm:text-sm opacity-90">All Compartments</div>
+                    <!-- Compartment 2 Counter -->
+                    <div class="bg-white/95 rounded-2xl p-6 text-center shadow-xl">
+                        <div class="text-4xl mb-2">📦</div>
+                        <div class="text-lg font-semibold text-gray-800 mb-1">Compartment 2</div>
+                        <div class="text-3xl font-bold text-blue-600" id="c2-counter">0</div>
+                        <div class="text-sm text-gray-600">Total Parcels</div>
+                    </div>
+
+                    <!-- Total Counter -->
+                    <div class="bg-blue-600 rounded-2xl p-6 text-center shadow-xl text-white">
+                        <div class="text-4xl mb-2">📊</div>
+                        <div class="text-lg font-semibold mb-1">Total Delivered</div>
+                        <div class="text-4xl font-bold" id="total-counter">0</div>
+                        <div class="text-sm opacity-90">All Compartments</div>
+                    </div>
                 </div>
-            </div>
+            </section>
+
 
             <!-- Weekly Parcel Chart -->
-            <div class="bg-white/95 rounded-2xl p-6 sm:p-8 shadow-xl mb-8 sm:mb-12">
+            <!-- <div class="bg-white/95 rounded-2xl p-6 sm:p-8 shadow-xl mb-8 sm:mb-12">
                 <div class="flex justify-between items-center mb-6">
                     <div class="text-xl sm:text-2xl font-semibold text-gray-800">Weekly Parcel Activity</div>
                     <div class="flex items-center gap-2">
@@ -567,10 +492,10 @@ try {
                 
                 <div class="relative h-64 sm:h-80">
                     <canvas id="weeklyChart"></canvas>
-                </div>
+                </div> -->
                 
                 <!-- Chart Legend/Summary -->
-                <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                <!-- <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                     <div class="bg-blue-50 rounded-lg p-3">
                         <div class="text-sm text-gray-600">This Week</div>
                         <div class="text-lg font-bold text-blue-600" id="thisWeekCount">0</div>
@@ -584,7 +509,7 @@ try {
                         <div class="text-lg font-bold text-purple-600" id="peakDay">--</div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Recent Events Section -->
             <div class="bg-white/95 rounded-2xl p-6 sm:p-8 shadow-xl">
