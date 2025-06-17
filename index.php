@@ -469,7 +469,7 @@ try {
                     </div>
 
                     <!-- Total Counter -->
-                    <div class="bg-blue-600 rounded-2xl p-6 text-center shadow-xl text-white">
+                    <div class="parcel-counter bg-blue-600 rounded-2xl p-6 text-center shadow-xl text-white">
                         <div class="text-4xl mb-2">📊</div>
                         <div class="text-lg font-semibold mb-1">Total Delivered</div>
                         <div class="text-4xl font-bold" id="total-counter">0</div>
