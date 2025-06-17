@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 08, 2025 at 08:41 AM
+-- Generation Time: Jun 16, 2025 at 06:55 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -41,8 +41,31 @@ CREATE TABLE `compartments` (
 --
 
 INSERT INTO `compartments` (`compartment_id`, `distance_cm`, `is_parcel_detected`, `is_security_mode`, `status`, `timestamp`) VALUES
-('C1', 0, 0, 0, 'Empty', '2025-06-08 05:37:04'),
-('C2', 0, 0, 0, 'Empty', '2025-06-08 05:37:04');
+('C1', 1.99, 0, 0, 'Occupied', '2025-06-16 11:03:53'),
+('C2', 3.21, 0, 0, 'Occupied', '2025-06-16 11:06:15');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `control_flags`
+--
+
+CREATE TABLE `control_flags` (
+  `id` int(11) NOT NULL,
+  `permission_granted` tinyint(1) NOT NULL DEFAULT 0,
+  `reset_triggered` tinyint(1) NOT NULL DEFAULT 0,
+  `submitted_delivery` tinyint(1) NOT NULL DEFAULT 0,
+  `alert_user` tinyint(1) NOT NULL DEFAULT 0,
+  `parcel_count_c1` int(11) DEFAULT 0,
+  `parcel_count_c2` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `control_flags`
+--
+
+INSERT INTO `control_flags` (`id`, `permission_granted`, `reset_triggered`, `submitted_delivery`, `alert_user`, `parcel_count_c1`, `parcel_count_c2`) VALUES
+(1, 0, 0, 0, 0, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -81,7 +104,7 @@ CREATE TABLE `events_log` (
 --
 
 INSERT INTO `events_log` (`id`, `event_type`, `compartment_id`, `status`, `permission_granted`, `reset_triggered`, `distance_cm`, `timestamp`) VALUES
-(1, 'system_startup', NULL, 'Empty', 0, 0, 0, '2025-06-08 05:37:04');
+(1, 'system_startup', NULL, 'Empty', 0, 0, 0, '2025-06-08 05:37:04'),
 
 -- --------------------------------------------------------
 
@@ -153,6 +176,12 @@ ALTER TABLE `compartments`
   ADD KEY `idx_timestamp` (`timestamp`);
 
 --
+-- Indexes for table `control_flags`
+--
+ALTER TABLE `control_flags`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `events_log`
 --
 ALTER TABLE `events_log`
@@ -172,10 +201,16 @@ ALTER TABLE `system_status`
 --
 
 --
+-- AUTO_INCREMENT for table `control_flags`
+--
+ALTER TABLE `control_flags`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `events_log`
 --
 ALTER TABLE `events_log`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68798;
 
 --
 -- Constraints for dumped tables
